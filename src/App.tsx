@@ -116,6 +116,7 @@ const CUSTOMER_STORAGE_KEY = "portal-pagos-customers-v1";
 const CUSTOMER_SEED_VERSION = "2026-05-05-address-import-v1";
 const CUSTOMER_SEED_VERSION_KEY = "portal-pagos-customer-seed-version";
 const BITPAY_URL_STORAGE_KEY = "portal-pagos-bitpay-url";
+const KRAK_URL_STORAGE_KEY = "portal-pagos-krak-url";
 
 function getLastNameSortKey(name: string) {
   const cleanName = name.trim().replace(/\s+/g, " ");
@@ -1163,10 +1164,12 @@ function PaymentSection({
   bitpayUrl,
   cartItems,
   cartTotal,
+  krakUrl,
 }: {
   bitpayUrl: string;
   cartItems: Array<{ product: Product; quantity: number; lineTotal: number }>;
   cartTotal: number;
+  krakUrl: string;
 }) {
   const [customerName, setCustomerName] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -1189,7 +1192,12 @@ function PaymentSection({
   }, [amount, cartItems, cartTotal, notes]);
 
   const paymentUrl = useMemo(() => {
-    const selected = method === "bitpay" ? bitpayUrl : BUSINESS_CONFIG.paymentLinks[method];
+    const selected =
+      method === "bitpay"
+        ? bitpayUrl
+        : method === "kraken"
+          ? krakUrl
+          : BUSINESS_CONFIG.paymentLinks[method];
     if (!selected || method === "zelleInfo") return "";
 
     const params = new URLSearchParams();
@@ -1200,7 +1208,7 @@ function PaymentSection({
 
     const query = params.toString();
     return query ? `${selected}${selected.includes("?") ? "&" : "?"}${query}` : selected;
-  }, [bitpayUrl, customerName, invoiceNumber, amount, notes, method]);
+  }, [bitpayUrl, customerName, invoiceNumber, amount, notes, method, krakUrl]);
 
   const whatsappMessage = useMemo(() => {
     const text = `Hello, I am ${customerName || "a customer"}. I would like to confirm a payment${
@@ -1211,13 +1219,14 @@ function PaymentSection({
 
   const isReady = customerName.trim() && amount && Number(amount) > 0;
   const needsBitpaySetup = method === "bitpay" && !bitpayUrl;
+  const needsKrakSetup = method === "kraken" && !krakUrl;
 
   const handlePay = () => {
     if (method === "zelleInfo") {
       setShowZelle(true);
       return;
     }
-    if (!isReady || needsBitpaySetup) return;
+    if (!isReady || needsBitpaySetup || needsKrakSetup) return;
     window.open(paymentUrl, "_blank", "noopener,noreferrer");
   };
 
@@ -1345,9 +1354,16 @@ function PaymentSection({
             </div>
           ) : null}
 
+          {needsKrakSetup ? (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>Add your Krak paylink or Kraktag link in the Crypto section before accepting Krak payments.</p>
+            </div>
+          ) : null}
+
           <button
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-4 text-base font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-            disabled={!isReady || needsBitpaySetup}
+            disabled={!isReady || needsBitpaySetup || needsKrakSetup}
             onClick={handlePay}
           >
             <ShieldCheck className="h-5 w-5" />
@@ -1419,17 +1435,28 @@ function PaymentSection({
 
 function CryptoSection({
   bitpayUrl,
+  krakUrl,
   setBitpayUrl,
+  setKrakUrl,
 }: {
   bitpayUrl: string;
+  krakUrl: string;
   setBitpayUrl: (url: string) => void;
+  setKrakUrl: (url: string) => void;
 }) {
   const [draftBitpayUrl, setDraftBitpayUrl] = useState(bitpayUrl);
+  const [draftKrakUrl, setDraftKrakUrl] = useState(krakUrl);
   const [savedBitpayUrl, setSavedBitpayUrl] = useState(false);
+  const [savedKrakUrl, setSavedKrakUrl] = useState(false);
 
   const saveBitpayUrl = () => {
     setBitpayUrl(draftBitpayUrl.trim());
     setSavedBitpayUrl(true);
+  };
+
+  const saveKrakUrl = () => {
+    setKrakUrl(draftKrakUrl.trim());
+    setSavedKrakUrl(true);
   };
 
   const cryptoOptions = [
@@ -1448,8 +1475,8 @@ function CryptoSection({
     {
       name: "Kraken / Krak Pay",
       description:
-        "An option for customers who use Kraken or Krak Pay through payment links, tags, or compatible payment tools.",
-      link: BUSINESS_CONFIG.paymentLinks.kraken,
+        "Connect your Krak payment link or public Kraktag page so customers can pay through Krak.",
+      link: krakUrl,
     },
   ];
 
@@ -1511,6 +1538,56 @@ function CryptoSection({
             </div>
             {savedBitpayUrl ? (
               <p className="mt-2 text-sm font-semibold text-green-700">BitPay link saved.</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-6 rounded-lg bg-white p-5 shadow-sm ring-1 ring-blue-100 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="flex-1">
+            <p className="text-sm font-bold uppercase tracking-wide text-red-600">Krak setup</p>
+            <h3 className="mt-1 text-2xl font-black text-blue-950">Connect Krak Pay</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              In the Krak app, create or copy your public paylink, payment request link, or Kraktag
+              link and paste it here. This portal stores only that public payment link.
+            </p>
+          </div>
+          <div className="min-w-0 flex-1">
+            <label className="block">
+              <span className="text-sm font-semibold">Krak paylink or Kraktag URL</span>
+              <input
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-slate-500 focus:bg-white"
+                onChange={(event) => {
+                  setDraftKrakUrl(event.target.value);
+                  setSavedKrakUrl(false);
+                }}
+                placeholder="https://..."
+                value={draftKrakUrl}
+              />
+            </label>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-800"
+                onClick={saveKrakUrl}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Save Krak link
+              </button>
+              {krakUrl ? (
+                <a
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-100 px-4 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50"
+                  href={krakUrl}
+                  rel="noreferrer"
+                  target="_blank"
+                >
+                  <QrCode className="h-4 w-4" />
+                  Test link
+                </a>
+              ) : null}
+            </div>
+            {savedKrakUrl ? (
+              <p className="mt-2 text-sm font-semibold text-green-700">Krak link saved.</p>
             ) : null}
           </div>
         </div>
@@ -1609,6 +1686,13 @@ export default function App() {
       return "";
     }
   });
+  const [krakUrl, setKrakUrl] = useState(() => {
+    try {
+      return window.localStorage.getItem(KRAK_URL_STORAGE_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
   const [customers, setCustomers] = useState<Customer[]>(() => {
     try {
       const savedCustomers = window.localStorage.getItem(CUSTOMER_STORAGE_KEY);
@@ -1642,6 +1726,10 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(BITPAY_URL_STORAGE_KEY, bitpayUrl);
   }, [bitpayUrl]);
+
+  useEffect(() => {
+    window.localStorage.setItem(KRAK_URL_STORAGE_KEY, krakUrl);
+  }, [krakUrl]);
 
   useEffect(() => {
     if (!import.meta.env.DEV && activeSection === "clients") {
@@ -1734,10 +1822,20 @@ export default function App() {
         )}
         {activeSection === "services" && <ServicesSection />}
         {activeSection === "pay" && (
-          <PaymentSection bitpayUrl={bitpayUrl} cartItems={cartItems} cartTotal={cartTotal} />
+          <PaymentSection
+            bitpayUrl={bitpayUrl}
+            cartItems={cartItems}
+            cartTotal={cartTotal}
+            krakUrl={krakUrl}
+          />
         )}
         {activeSection === "crypto" && (
-          <CryptoSection bitpayUrl={bitpayUrl} setBitpayUrl={setBitpayUrl} />
+          <CryptoSection
+            bitpayUrl={bitpayUrl}
+            krakUrl={krakUrl}
+            setBitpayUrl={setBitpayUrl}
+            setKrakUrl={setKrakUrl}
+          />
         )}
         {activeSection === "policies" && <PoliciesSection />}
       </main>
