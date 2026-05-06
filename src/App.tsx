@@ -52,6 +52,7 @@ const BUSINESS_CONFIG = {
     zelleInfo: "Send Zelle to payments@americanpcandsupply.com",
   },
   krakTag: "@engelsguzman",
+  krakQrImage: "/krak-engelsguzman-qr.jpg",
 };
 
 const SERVICES: Array<{
@@ -1394,6 +1395,11 @@ function PaymentSection({
                 <span className="font-black text-red-700">{BUSINESS_CONFIG.krakTag}</span>. Include
                 your invoice or reference in the note.
               </p>
+              <img
+                alt={`Krak QR code for ${BUSINESS_CONFIG.krakTag}`}
+                className="mx-auto mt-4 max-w-72 rounded-lg bg-white object-contain p-2 ring-1 ring-blue-100"
+                src={BUSINESS_CONFIG.krakQrImage}
+              />
             </div>
           ) : null}
 
@@ -1596,6 +1602,11 @@ function CryptoSection({
               <p className="mt-1 text-sm text-slate-600">
                 Customers can open Krak and send payment to this Kraktag.
               </p>
+              <img
+                alt={`Krak QR code for ${BUSINESS_CONFIG.krakTag}`}
+                className="mx-auto mt-4 max-w-80 rounded-lg bg-white object-contain p-2 ring-1 ring-blue-100"
+                src={BUSINESS_CONFIG.krakQrImage}
+              />
             </div>
             <p className="mt-2 text-sm font-semibold text-slate-700">
               Do not use krak.app if your browser shows an SSL error.
