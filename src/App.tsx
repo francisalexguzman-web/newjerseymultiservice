@@ -172,6 +172,30 @@ function mergeSeedCustomers(customers: Customer[], seedCustomers: Customer[]) {
   return sortCustomersByLastName([...missingSeedCustomers, ...customers]);
 }
 
+function normalizePublicPaymentUrl(value: string) {
+  const trimmedValue = value.trim();
+  if (!trimmedValue) return "";
+  return /^https?:\/\//i.test(trimmedValue) ? trimmedValue : `https://${trimmedValue}`;
+}
+
+function getKrakUrlError(value: string) {
+  const normalizedUrl = normalizePublicPaymentUrl(value);
+  if (!normalizedUrl) return "";
+
+  try {
+    const url = new URL(normalizedUrl);
+    if (url.protocol !== "https:") {
+      return "Use an https:// link for Krak payments.";
+    }
+    if (url.hostname.toLowerCase() === "krak.app") {
+      return "krak.app is not opening securely. Use the paylink from inside the Krak app or the official Kraken/Krak page.";
+    }
+    return "";
+  } catch {
+    return "Enter a valid Krak paylink or Kraktag URL.";
+  }
+}
+
 const PRODUCTS: Product[] = [
   {
     id: "premium-business-laptop-pro",
@@ -1448,14 +1472,16 @@ function CryptoSection({
   const [draftKrakUrl, setDraftKrakUrl] = useState(krakUrl);
   const [savedBitpayUrl, setSavedBitpayUrl] = useState(false);
   const [savedKrakUrl, setSavedKrakUrl] = useState(false);
+  const krakUrlError = getKrakUrlError(draftKrakUrl);
 
   const saveBitpayUrl = () => {
-    setBitpayUrl(draftBitpayUrl.trim());
+    setBitpayUrl(normalizePublicPaymentUrl(draftBitpayUrl));
     setSavedBitpayUrl(true);
   };
 
   const saveKrakUrl = () => {
-    setKrakUrl(draftKrakUrl.trim());
+    if (krakUrlError) return;
+    setKrakUrl(normalizePublicPaymentUrl(draftKrakUrl));
     setSavedKrakUrl(true);
   };
 
@@ -1552,6 +1578,9 @@ function CryptoSection({
               In the Krak app, create or copy your public paylink, payment request link, or Kraktag
               link and paste it here. This portal stores only that public payment link.
             </p>
+            <p className="mt-2 text-sm font-semibold text-slate-700">
+              Do not use krak.app if your browser shows an SSL error.
+            </p>
           </div>
           <div className="min-w-0 flex-1">
             <label className="block">
@@ -1566,9 +1595,16 @@ function CryptoSection({
                 value={draftKrakUrl}
               />
             </label>
+            {krakUrlError ? (
+              <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{krakUrlError}</p>
+              </div>
+            ) : null}
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <button
-                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-800"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={Boolean(krakUrlError)}
                 onClick={saveKrakUrl}
               >
                 <ShieldCheck className="h-4 w-4" />
