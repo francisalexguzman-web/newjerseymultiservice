@@ -48,9 +48,10 @@ const BUSINESS_CONFIG = {
     cashapp: "https://cash.app/$REPLACE",
     crypto: "https://commerce.coinbase.com/REPLACE_THIS_LINK",
     bitpay: "https://bitpay.com/invoice/REPLACE_THIS_LINK",
-    kraken: "https://kraken.com/krak/payments",
+    kraken: "https://www.kraken.com/krak",
     zelleInfo: "Send Zelle to payments@americanpcandsupply.com",
   },
+  krakTag: "@engelsguzman",
 };
 
 const SERVICES: Array<{
@@ -1243,7 +1244,7 @@ function PaymentSection({
 
   const isReady = customerName.trim() && amount && Number(amount) > 0;
   const needsBitpaySetup = method === "bitpay" && !bitpayUrl;
-  const needsKrakSetup = method === "kraken" && !krakUrl;
+  const needsKrakSetup = method === "kraken" && !krakUrl && !BUSINESS_CONFIG.krakTag;
 
   const handlePay = () => {
     if (method === "zelleInfo") {
@@ -1385,6 +1386,17 @@ function PaymentSection({
             </div>
           ) : null}
 
+          {method === "kraken" && BUSINESS_CONFIG.krakTag ? (
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+              <p className="font-semibold text-blue-950">Krak payment instructions</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Open Krak and send the payment to{" "}
+                <span className="font-black text-red-700">{BUSINESS_CONFIG.krakTag}</span>. Include
+                your invoice or reference in the note.
+              </p>
+            </div>
+          ) : null}
+
           <button
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-4 text-base font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             disabled={!isReady || needsBitpaySetup || needsKrakSetup}
@@ -1501,8 +1513,8 @@ function CryptoSection({
     {
       name: "Kraken / Krak Pay",
       description:
-        "Connect your Krak payment link or public Kraktag page so customers can pay through Krak.",
-      link: krakUrl,
+        `Customers can pay through Krak by sending funds to ${BUSINESS_CONFIG.krakTag}.`,
+      link: krakUrl || BUSINESS_CONFIG.paymentLinks.kraken,
     },
   ];
 
@@ -1578,6 +1590,13 @@ function CryptoSection({
               In the Krak app, create or copy your public paylink, payment request link, or Kraktag
               link and paste it here. This portal stores only that public payment link.
             </p>
+            <div className="mt-3 rounded-lg bg-blue-50 p-4 ring-1 ring-blue-100">
+              <p className="text-sm font-semibold text-slate-600">Current Krak account</p>
+              <p className="mt-1 text-2xl font-black text-red-700">{BUSINESS_CONFIG.krakTag}</p>
+              <p className="mt-1 text-sm text-slate-600">
+                Customers can open Krak and send payment to this Kraktag.
+              </p>
+            </div>
             <p className="mt-2 text-sm font-semibold text-slate-700">
               Do not use krak.app if your browser shows an SSL error.
             </p>
