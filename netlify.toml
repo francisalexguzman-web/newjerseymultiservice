@@ -3,24 +3,6 @@
   publish = "dist"
 
 [[redirects]]
-  from = "https://www.newjerseymultiservice.com/*"
-  to = "https://newjerseymultiservice.com/:splat"
-  status = 301
-  force = true
-
-[[redirects]]
-  from = "http://newjerseymultiservice.com/*"
-  to = "https://newjerseymultiservice.com/:splat"
-  status = 301
-  force = true
-
-[[redirects]]
-  from = "http://www.newjerseymultiservice.com/*"
-  to = "https://newjerseymultiservice.com/:splat"
-  status = 301
-  force = true
-
-[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
