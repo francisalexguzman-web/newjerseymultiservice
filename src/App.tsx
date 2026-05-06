@@ -49,6 +49,7 @@ const BUSINESS_CONFIG = {
     crypto: "https://commerce.coinbase.com/REPLACE_THIS_LINK",
     bitpay: "https://bitpay.com/invoice/REPLACE_THIS_LINK",
     kraken: "https://www.kraken.com/krak",
+    monero: "https://www.getmonero.org/",
     zelleInfo: "Send Zelle to payments@americanpcandsupply.com",
   },
   krakTag: "@engelsguzman",
@@ -119,6 +120,7 @@ const CUSTOMER_SEED_VERSION = "2026-05-05-address-import-v1";
 const CUSTOMER_SEED_VERSION_KEY = "portal-pagos-customer-seed-version";
 const BITPAY_URL_STORAGE_KEY = "portal-pagos-bitpay-url";
 const KRAK_URL_STORAGE_KEY = "portal-pagos-krak-url";
+const MONERO_ADDRESS_STORAGE_KEY = "portal-pagos-monero-address";
 
 function getLastNameSortKey(name: string) {
   const cleanName = name.trim().replace(/\s+/g, " ");
@@ -196,6 +198,18 @@ function getKrakUrlError(value: string) {
   } catch {
     return "Enter a valid Krak paylink or Kraktag URL.";
   }
+}
+
+function getMoneroAddressError(value: string) {
+  const address = value.trim();
+  if (!address) return "";
+  if (address.length < 90 || address.length > 110) {
+    return "Monero addresses are usually 95 to 106 characters long.";
+  }
+  if (!/^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$/.test(address)) {
+    return "Enter a valid Monero address without spaces or special characters.";
+  }
+  return "";
 }
 
 const PRODUCTS: Product[] = [
@@ -1191,11 +1205,13 @@ function PaymentSection({
   cartItems,
   cartTotal,
   krakUrl,
+  moneroAddress,
 }: {
   bitpayUrl: string;
   cartItems: Array<{ product: Product; quantity: number; lineTotal: number }>;
   cartTotal: number;
   krakUrl: string;
+  moneroAddress: string;
 }) {
   const [customerName, setCustomerName] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
@@ -1223,6 +1239,8 @@ function PaymentSection({
         ? bitpayUrl
         : method === "kraken"
           ? krakUrl
+          : method === "monero"
+            ? ""
           : BUSINESS_CONFIG.paymentLinks[method];
     if (!selected || method === "zelleInfo") return "";
 
@@ -1246,13 +1264,15 @@ function PaymentSection({
   const isReady = customerName.trim() && amount && Number(amount) > 0;
   const needsBitpaySetup = method === "bitpay" && !bitpayUrl;
   const needsKrakSetup = method === "kraken" && !krakUrl && !BUSINESS_CONFIG.krakTag;
+  const needsMoneroSetup = method === "monero" && !moneroAddress;
 
   const handlePay = () => {
     if (method === "zelleInfo") {
       setShowZelle(true);
       return;
     }
-    if (!isReady || needsBitpaySetup || needsKrakSetup) return;
+    if (method === "monero") return;
+    if (!isReady || needsBitpaySetup || needsKrakSetup || needsMoneroSetup) return;
     window.open(paymentUrl, "_blank", "noopener,noreferrer");
   };
 
@@ -1264,6 +1284,7 @@ function PaymentSection({
     ["crypto", "Crypto checkout", QrCode],
     ["bitpay", "BitPay", QrCode],
     ["kraken", "Kraken / Krak Pay", QrCode],
+    ["monero", "Monero (XMR)", QrCode],
     ["zelleInfo", "Zelle", ReceiptText],
   ];
 
@@ -1387,6 +1408,13 @@ function PaymentSection({
             </div>
           ) : null}
 
+          {needsMoneroSetup ? (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>Add your Monero receiving address in the Crypto section before accepting XMR payments.</p>
+            </div>
+          ) : null}
+
           {method === "kraken" && BUSINESS_CONFIG.krakTag ? (
             <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
               <p className="font-semibold text-blue-950">Krak payment instructions</p>
@@ -1403,13 +1431,28 @@ function PaymentSection({
             </div>
           ) : null}
 
+          {method === "monero" && moneroAddress ? (
+            <div className="rounded-lg border border-blue-100 bg-blue-50 p-4">
+              <p className="font-semibold text-blue-950">Monero payment instructions</p>
+              <p className="mt-1 text-sm text-slate-700">
+                Send XMR to this address and include your invoice/reference when confirming by WhatsApp.
+              </p>
+              <p className="mt-3 break-all rounded-lg bg-white p-3 font-mono text-xs font-bold text-blue-950 ring-1 ring-blue-100">
+                {moneroAddress}
+              </p>
+              <p className="mt-2 text-xs font-semibold text-slate-600">
+                Confirm the current XMR equivalent before sending. Monero transactions are irreversible.
+              </p>
+            </div>
+          ) : null}
+
           <button
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-4 text-base font-bold text-white shadow-sm transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-            disabled={!isReady || needsBitpaySetup || needsKrakSetup}
+            disabled={!isReady || needsBitpaySetup || needsKrakSetup || needsMoneroSetup}
             onClick={handlePay}
           >
             <ShieldCheck className="h-5 w-5" />
-            Pay now {amount ? money(amount) : ""}
+            {method === "monero" ? "Use Monero instructions" : `Pay now ${amount ? money(amount) : ""}`}
           </button>
         </div>
       </motion.div>
@@ -1478,19 +1521,26 @@ function PaymentSection({
 function CryptoSection({
   bitpayUrl,
   krakUrl,
+  moneroAddress,
   setBitpayUrl,
   setKrakUrl,
+  setMoneroAddress,
 }: {
   bitpayUrl: string;
   krakUrl: string;
+  moneroAddress: string;
   setBitpayUrl: (url: string) => void;
   setKrakUrl: (url: string) => void;
+  setMoneroAddress: (address: string) => void;
 }) {
   const [draftBitpayUrl, setDraftBitpayUrl] = useState(bitpayUrl);
   const [draftKrakUrl, setDraftKrakUrl] = useState(krakUrl);
+  const [draftMoneroAddress, setDraftMoneroAddress] = useState(moneroAddress);
   const [savedBitpayUrl, setSavedBitpayUrl] = useState(false);
   const [savedKrakUrl, setSavedKrakUrl] = useState(false);
+  const [savedMoneroAddress, setSavedMoneroAddress] = useState(false);
   const krakUrlError = getKrakUrlError(draftKrakUrl);
+  const moneroAddressError = getMoneroAddressError(draftMoneroAddress);
 
   const saveBitpayUrl = () => {
     setBitpayUrl(normalizePublicPaymentUrl(draftBitpayUrl));
@@ -1501,6 +1551,12 @@ function CryptoSection({
     if (krakUrlError) return;
     setKrakUrl(normalizePublicPaymentUrl(draftKrakUrl));
     setSavedKrakUrl(true);
+  };
+
+  const saveMoneroAddress = () => {
+    if (moneroAddressError) return;
+    setMoneroAddress(draftMoneroAddress.trim());
+    setSavedMoneroAddress(true);
   };
 
   const cryptoOptions = [
@@ -1521,6 +1577,12 @@ function CryptoSection({
       description:
         `Customers can pay through Krak by sending funds to ${BUSINESS_CONFIG.krakTag}.`,
       link: krakUrl || BUSINESS_CONFIG.paymentLinks.kraken,
+    },
+    {
+      name: "Monero (XMR)",
+      description:
+        "Accept privacy-focused XMR payments by sharing your Monero receiving address with customers.",
+      link: BUSINESS_CONFIG.paymentLinks.monero,
     },
   ];
 
@@ -1659,6 +1721,56 @@ function CryptoSection({
         </div>
       </div>
 
+      <div className="mb-6 rounded-lg bg-white p-5 shadow-sm ring-1 ring-blue-100 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
+          <div className="flex-1">
+            <p className="text-sm font-bold uppercase tracking-wide text-red-600">Monero setup</p>
+            <h3 className="mt-1 text-2xl font-black text-blue-950">Accept XMR payments</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              Paste your public Monero receiving address here. Customers will see the address when
+              they choose Monero at checkout.
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-700">
+              Never paste your seed phrase, private spend key, or private view key.
+            </p>
+          </div>
+          <div className="min-w-0 flex-1">
+            <label className="block">
+              <span className="text-sm font-semibold">Monero receiving address</span>
+              <textarea
+                className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-xs outline-none transition focus:border-slate-500 focus:bg-white"
+                onChange={(event) => {
+                  setDraftMoneroAddress(event.target.value);
+                  setSavedMoneroAddress(false);
+                }}
+                placeholder="Paste your public XMR address"
+                rows={4}
+                value={draftMoneroAddress}
+              />
+            </label>
+            {moneroAddressError ? (
+              <div className="mt-3 flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{moneroAddressError}</p>
+              </div>
+            ) : null}
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <button
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                disabled={Boolean(moneroAddressError)}
+                onClick={saveMoneroAddress}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Save Monero address
+              </button>
+            </div>
+            {savedMoneroAddress ? (
+              <p className="mt-2 text-sm font-semibold text-green-700">Monero address saved.</p>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
       <div className="grid gap-5 md:grid-cols-3">
         {cryptoOptions.map((option) => (
           <motion.article
@@ -1759,6 +1871,13 @@ export default function App() {
       return "";
     }
   });
+  const [moneroAddress, setMoneroAddress] = useState(() => {
+    try {
+      return window.localStorage.getItem(MONERO_ADDRESS_STORAGE_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
   const [customers, setCustomers] = useState<Customer[]>(() => {
     try {
       const savedCustomers = window.localStorage.getItem(CUSTOMER_STORAGE_KEY);
@@ -1796,6 +1915,10 @@ export default function App() {
   useEffect(() => {
     window.localStorage.setItem(KRAK_URL_STORAGE_KEY, krakUrl);
   }, [krakUrl]);
+
+  useEffect(() => {
+    window.localStorage.setItem(MONERO_ADDRESS_STORAGE_KEY, moneroAddress);
+  }, [moneroAddress]);
 
   useEffect(() => {
     if (!import.meta.env.DEV && activeSection === "clients") {
@@ -1893,14 +2016,17 @@ export default function App() {
             cartItems={cartItems}
             cartTotal={cartTotal}
             krakUrl={krakUrl}
+            moneroAddress={moneroAddress}
           />
         )}
         {activeSection === "crypto" && (
           <CryptoSection
             bitpayUrl={bitpayUrl}
             krakUrl={krakUrl}
+            moneroAddress={moneroAddress}
             setBitpayUrl={setBitpayUrl}
             setKrakUrl={setKrakUrl}
+            setMoneroAddress={setMoneroAddress}
           />
         )}
         {activeSection === "policies" && <PoliciesSection />}
