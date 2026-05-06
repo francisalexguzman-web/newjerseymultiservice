@@ -54,6 +54,9 @@ const BUSINESS_CONFIG = {
   },
   krakTag: "@engelsguzman",
   krakQrImage: "/krak-engelsguzman-qr.jpg",
+  moneroAddress:
+    "42KDphgWR6Nb3qfFK8WUEVEtvLkjYmwitUrSQcSVrmG6LbLp1LCQCjeLbuZKgn7jPd73eZRuYrKih2BTQAPCxkqeRv4oyNV",
+  moneroQrImage: "/monero-qr.svg",
 };
 
 const SERVICES: Array<{
@@ -1437,6 +1440,11 @@ function PaymentSection({
               <p className="mt-1 text-sm text-slate-700">
                 Send XMR to this address and include your invoice/reference when confirming by WhatsApp.
               </p>
+              <img
+                alt="Monero payment QR code"
+                className="mx-auto mt-4 max-w-72 rounded-lg bg-white object-contain p-3 ring-1 ring-blue-100"
+                src={BUSINESS_CONFIG.moneroQrImage}
+              />
               <p className="mt-3 break-all rounded-lg bg-white p-3 font-mono text-xs font-bold text-blue-950 ring-1 ring-blue-100">
                 {moneroAddress}
               </p>
@@ -1733,6 +1741,11 @@ function CryptoSection({
             <p className="mt-2 text-sm font-semibold text-slate-700">
               Never paste your seed phrase, private spend key, or private view key.
             </p>
+            <img
+              alt="Monero payment QR code"
+              className="mx-auto mt-4 max-w-80 rounded-lg bg-white object-contain p-3 ring-1 ring-blue-100"
+              src={BUSINESS_CONFIG.moneroQrImage}
+            />
           </div>
           <div className="min-w-0 flex-1">
             <label className="block">
@@ -1873,9 +1886,9 @@ export default function App() {
   });
   const [moneroAddress, setMoneroAddress] = useState(() => {
     try {
-      return window.localStorage.getItem(MONERO_ADDRESS_STORAGE_KEY) || "";
+      return window.localStorage.getItem(MONERO_ADDRESS_STORAGE_KEY) || BUSINESS_CONFIG.moneroAddress;
     } catch {
-      return "";
+      return BUSINESS_CONFIG.moneroAddress;
     }
   });
   const [customers, setCustomers] = useState<Customer[]>(() => {
