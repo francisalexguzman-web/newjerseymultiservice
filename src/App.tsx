@@ -1629,7 +1629,8 @@ export default function App() {
       const seedVersion = window.localStorage.getItem(CUSTOMER_SEED_VERSION_KEY);
       if (seedVersion === CUSTOMER_SEED_VERSION) return;
 
-      const { customerSeed } = await import(/* @vite-ignore */ "./data/customerSeed.local");
+      const localSeedModule = "./data/customerSeed.local";
+      const { customerSeed } = await import(/* @vite-ignore */ localSeedModule);
       const seedCustomers = createSeedCustomers(customerSeed);
       setCustomers((currentCustomers) => mergeSeedCustomers(currentCustomers, seedCustomers));
       window.localStorage.setItem(CUSTOMER_SEED_VERSION_KEY, CUSTOMER_SEED_VERSION);
