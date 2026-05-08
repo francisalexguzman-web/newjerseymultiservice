@@ -11,7 +11,7 @@ export const businessConfig = {
   businessName: "NEW JERSEY MULTISERVICE & DESIGN",
   tagline: "Secure payment portal",
   phone: "9089167015",
-  email: "payments@yourbusiness.com",
+  email: "newjerseymultiservice@protonmail.com",
   address: "Available for payments 24/7",
   whatsappMessage: "Hello, I need help with my payment.",
   paymentLinks: [
