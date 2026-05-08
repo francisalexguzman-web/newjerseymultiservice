@@ -354,7 +354,16 @@ const PRODUCTS: Product[] = [
   },
 ];
 
-type SectionKey = "home" | "catalog" | "cart" | "clients" | "services" | "pay" | "crypto" | "policies";
+type SectionKey =
+  | "home"
+  | "catalog"
+  | "cart"
+  | "clients"
+  | "services"
+  | "pay"
+  | "crypto"
+  | "policies"
+  | "order-received";
 type PaymentMethod = keyof typeof BUSINESS_CONFIG.paymentLinks;
 
 function money(value: string | number) {
@@ -760,11 +769,22 @@ function CartSection({
   setActiveSection: (section: SectionKey) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;
 }) {
+  const orderSummary = cartItems
+    .map((item) => `${item.quantity} x ${item.product.name} - ${money(item.lineTotal)}`)
+    .join("\n");
   const whatsappOrderUrl = `https://wa.me/${BUSINESS_CONFIG.whatsappNumber}?text=${encodeURIComponent(
-    `Hello, I would like to place this order:\n\n${cartItems
-      .map((item) => `${item.quantity} x ${item.product.name} - ${money(item.lineTotal)}`)
-      .join("\n")}\n\nTotal: ${money(cartTotal)}`,
+    `Hello, I would like to place this order:\n\n${orderSummary}\n\nTotal: ${money(cartTotal)}`,
   )}`;
+  const paymentOptions = [
+    "Card / Apple Pay",
+    "Square",
+    "PayPal",
+    "Cash App",
+    "BitPay",
+    "Krak Pay",
+    "Monero (XMR)",
+    "Zelle",
+  ];
 
   return (
     <section className="grid gap-6 py-10 lg:grid-cols-[1.15fr_0.85fr]">
@@ -862,6 +882,86 @@ function CartSection({
       </div>
 
       <aside className="space-y-5">
+        <form
+          action="/order-received"
+          className="rounded-lg bg-white p-5 shadow-sm ring-1 ring-blue-100"
+          data-netlify="true"
+          method="POST"
+          name="order"
+        >
+          <input name="form-name" type="hidden" value="order" />
+          <input name="orderSummary" type="hidden" value={orderSummary} />
+          <input name="cartTotal" type="hidden" value={money(cartTotal)} />
+          <p className="text-sm font-bold uppercase tracking-wide text-red-600">Order request</p>
+          <h3 className="mt-1 text-2xl font-black text-blue-950">Send order by email</h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            Send your order details so we can confirm availability and payment instructions.
+          </p>
+
+          <div className="mt-4 space-y-3">
+            <label className="block">
+              <span className="text-sm font-semibold">Name</span>
+              <input
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-500 focus:bg-white"
+                name="customerName"
+                placeholder="Customer name"
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold">Phone</span>
+              <input
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-500 focus:bg-white"
+                name="phone"
+                placeholder="Phone number"
+                required
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold">Email</span>
+              <input
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-500 focus:bg-white"
+                name="email"
+                placeholder="Email address"
+                type="email"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold">Preferred payment</span>
+              <select
+                className="mt-2 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-500 focus:bg-white"
+                name="preferredPayment"
+                required
+              >
+                <option value="">Select payment method</option>
+                {paymentOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-sm font-semibold">Notes</span>
+              <textarea
+                className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 outline-none transition focus:border-slate-500 focus:bg-white"
+                name="notes"
+                placeholder="Delivery notes, questions, invoice reference..."
+                rows={3}
+              />
+            </label>
+          </div>
+
+          <button
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-900 px-5 py-4 text-base font-bold text-white shadow-sm transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={cartItems.length === 0}
+            type="submit"
+          >
+            <Mail className="h-5 w-5" />
+            Email order request
+          </button>
+        </form>
+
         <div className="rounded-lg bg-blue-950 p-6 text-white shadow-sm">
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -1867,8 +1967,43 @@ function PoliciesSection() {
   );
 }
 
+function OrderReceivedSection({ setActiveSection }: { setActiveSection: (section: SectionKey) => void }) {
+  return (
+    <section className="grid min-h-[55vh] place-items-center py-10">
+      <div className="max-w-xl rounded-lg bg-white p-8 text-center shadow-sm ring-1 ring-blue-100">
+        <div className="mx-auto grid h-16 w-16 place-items-center rounded-lg bg-green-50">
+          <CheckCircle2 className="h-9 w-9 text-green-600" />
+        </div>
+        <p className="mt-5 text-sm font-bold uppercase tracking-wide text-red-600">Order sent</p>
+        <h2 className="mt-2 text-3xl font-black text-blue-950">We received your order request</h2>
+        <p className="mt-3 text-sm leading-6 text-slate-600">
+          Thank you. We will review availability and contact you with payment and delivery details.
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <button
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-800"
+            onClick={() => setActiveSection("catalog")}
+          >
+            <Package className="h-4 w-4" />
+            Back to catalog
+          </button>
+          <a
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-100 px-5 py-3 text-sm font-bold text-red-700 transition hover:bg-red-50"
+            href={`mailto:${BUSINESS_CONFIG.email}`}
+          >
+            <Mail className="h-4 w-4" />
+            Email us
+          </a>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function App() {
-  const [activeSection, setActiveSection] = useState<SectionKey>("home");
+  const [activeSection, setActiveSection] = useState<SectionKey>(() =>
+    window.location.pathname === "/order-received" ? "order-received" : "home",
+  );
   const [cart, setCart] = useState<CartState>({});
   const [bitpayUrl, setBitpayUrl] = useState(() => {
     try {
@@ -2003,6 +2138,7 @@ export default function App() {
 
       <main className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         {activeSection === "home" && <HomeSection setActiveSection={setActiveSection} />}
+        {activeSection === "order-received" && <OrderReceivedSection setActiveSection={setActiveSection} />}
         {activeSection === "catalog" && (
           <CatalogSection addToCart={addToCart} cart={cart} setActiveSection={setActiveSection} />
         )}
